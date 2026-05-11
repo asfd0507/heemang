@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   format, 
   addMonths, 
@@ -15,53 +15,79 @@ import {
   isToday,
   isBefore,
   startOfToday,
-  getDay
+  parseISO
 } from "date-fns";
 import { ko } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Send, Sparkles, Lock, Unlock, X, Check, PenLine } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, X, Check, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { createClient } from "@/lib/supabase/client";
 
-// --- Dummy Data ---
-const dummyCompletedDates = [
-  new Date(2026, 4, 1),
-  new Date(2026, 4, 2),
-  new Date(2026, 4, 4),
-  new Date(2026, 4, 5),
-  new Date(2026, 4, 6),
-  new Date(2026, 4, 7),
-];
+interface Answer {
+  id: string;
+  content: string;
+  answer_date: string;
+  cycle_year: number;
+}
 
-const dummyArchiveData = {
-  "2026-05-01": [
-    { year: 2026, answer: "오늘은 정말 기분 좋은 날이었어요.", date: "2026.05.01" },
-    { year: 2025, answer: "작년의 나는 참 바빴네요.", date: "2025.05.01" }
-  ],
-  "2026-05-08": [
-    { year: 2026, answer: "행복은 멀리 있지 않다는 걸 깨달았어요.", date: "2026.05.08" },
-    { year: 2025, answer: "맛있는 걸 먹어서 행복했습니다.", date: "2025.05.08" }
-  ]
-};
+interface DiaryPlan {
+  id: string;
+  frequency: "daily" | "weekly" | "monthly";
+  duration_years: number;
+  start_date: string;
+}
 
-export default function UnifiedPage() {
-  const [hasAnsweredToday, setHasAnsweredToday] = useState(false);
+export default function DashboardPage() {
+  const supabase = createClient();
+  
+  // State
+  const [user, setUser] = useState<any>(null);
+  const [plan, setPlan] = useState<DiaryPlan | null>(null);
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [answer, setAnswer] = useState("");
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 4, 8));
-  const [frequency, setFrequency] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [newAnswer, setNewAnswer] = useState("");
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // 온보딩 설정 불러오기
-  useEffect(() => {
-    const settings = localStorage.getItem("diary_settings");
-    if (settings) {
-      const { frequency: savedFrequency } = JSON.parse(settings);
-      setFrequency(savedFrequency);
+  const today = startOfToday();
+
+  // Fetch initial data
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setUser(user);
+
+    // 1. Get Plan
+    const { data: planData } = await supabase
+      .from("diary_plans")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+    
+    setPlan(planData);
+
+    // 2. Get Answers
+    if (planData) {
+      const { data: answersData } = await supabase
+        .from("answers")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("answer_date", { ascending: false });
+      
+      setAnswers(answersData || []);
     }
-  }, []);
+    setLoading(false);
+  }, [supabase]);
 
-  const today = new Date();
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const frequency = plan?.frequency || "daily";
   const questionsByFrequency = {
     daily: "당신이 가장 행복했던 순간은 언제인가요?",
     weekly: "이번 주 가장 보람찼던 일은 무엇인가요?",
@@ -86,44 +112,77 @@ export default function UnifiedPage() {
     }
   };
 
-  const handleAnswerSubmit = (e: React.FormEvent) => {
+  const handleAnswerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!answer.trim()) return;
-    setHasAnsweredToday(true);
-    setIsWriteModalOpen(false);
+    if (!newAnswer.trim() || !user || !plan) return;
+
+    // Calculate cycle year (simplified for MVP: 1 for now)
+    // In real app, you'd calculate: currentYear - planStartYear + 1
+    const cycleYear = 1;
+
+    const { error } = await supabase
+      .from("answers")
+      .insert({
+        user_id: user.id,
+        plan_id: plan.id,
+        content: newAnswer,
+        answer_date: format(today, "yyyy-MM-dd"),
+        cycle_year: cycleYear,
+      });
+
+    if (error) {
+      console.error(error);
+      alert("답변 저장 중 오류가 발생했습니다.");
+    } else {
+      setNewAnswer("");
+      setIsWriteModalOpen(false);
+      fetchData(); // Refresh data
+    }
   };
 
-  // 해당 주/월의 답변 완료 여부 체크
-  const isPeriodCompleted = (day: Date) => {
+  // Logic to check if a date has an answer
+  const getAnswerForDate = (day: Date) => {
+    return answers.find(a => isSameDay(parseISO(a.answer_date), day));
+  };
+
+  // Logic to check if a specific day's period is completed
+  const isDateInCompletedPeriod = (day: Date) => {
     if (frequency === "daily") {
-      return dummyCompletedDates.some(d => isSameDay(d, day)) || (isToday(day) && hasAnsweredToday);
+      return !!getAnswerForDate(day);
     }
     if (frequency === "weekly") {
       const wStart = startOfWeek(day);
       const wEnd = endOfWeek(day);
-      return dummyCompletedDates.some(d => d >= wStart && d <= wEnd) || 
-             (isToday(day) && hasAnsweredToday) ||
-             (isSameDay(startOfWeek(today), wStart) && hasAnsweredToday);
+      return answers.some(a => {
+        const d = parseISO(a.answer_date);
+        return d >= wStart && d <= wEnd;
+      });
     }
     if (frequency === "monthly") {
       const mStart = startOfMonth(day);
       const mEnd = endOfMonth(day);
-      return dummyCompletedDates.some(d => d >= mStart && d <= mEnd) ||
-             (isToday(day) && hasAnsweredToday) ||
-             (isSameMonth(day, today) && hasAnsweredToday);
+      return answers.some(a => {
+        const d = parseISO(a.answer_date);
+        return d >= mStart && d <= mEnd;
+      });
     }
     return false;
   };
 
-  // 주기에 따른 해당 일 여부 체크
-  const isTargetDay = (day: Date) => {
-    if (frequency === "daily") return true;
-    // 주간/월간은 모든 날이 잠재적 기록일
-    if (frequency === "weekly" || frequency === "monthly") return true;
-    return false;
+  // Logic to check if the current (today's) period is completed
+  const isPeriodCompleted = () => {
+    return isDateInCompletedPeriod(today);
   };
 
-  const periodCompleted = isPeriodCompleted(today);
+  const periodCompleted = isPeriodCompleted();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7]">
+        <div className="animate-pulse text-[#86868B] font-bold">로딩 중...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] pb-20 pt-10 px-4 md:px-6">
@@ -148,16 +207,14 @@ export default function UnifiedPage() {
                 </span>
               </div>
               <h1 className="text-xl md:text-2xl font-bold tracking-tight text-[#1D1D1F] leading-snug">
-                {!isTargetDay(today) 
-                  ? "오늘은 기록하는 날이 아닙니다." 
-                  : periodCompleted 
-                    ? `${frequency === "daily" ? "오늘" : frequency === "weekly" ? "이번 주" : "이번 달"}의 답변을 완료했습니다.` 
-                    : `"${question}"`
+                {periodCompleted 
+                  ? `${frequency === "daily" ? "오늘" : frequency === "weekly" ? "이번 주" : "이번 달"}의 답변을 완료했습니다.` 
+                  : `"${question}"`
                 }
               </h1>
             </div>
             
-            {isTargetDay(today) && !periodCompleted && (
+            {!periodCompleted && (
               <Button 
                 onClick={() => setIsWriteModalOpen(true)}
                 className="mac-button-primary rounded-full h-12 px-8 flex items-center gap-2 shadow-lg hover:translate-y-[-2px] active:translate-y-[0px]"
@@ -166,7 +223,7 @@ export default function UnifiedPage() {
                 답변 남기기
               </Button>
             )}
-            {(periodCompleted || !isTargetDay(today)) && (
+            {periodCompleted && (
               <div className="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center text-green-500 border border-green-100">
                 <Check className="h-6 w-6" />
               </div>
@@ -182,7 +239,7 @@ export default function UnifiedPage() {
                 <h2 className="text-2xl font-black text-[#1D1D1F] tracking-tight">
                   {format(currentMonth, "yyyy년 M월", { locale: ko })}
                 </h2>
-                <p className="text-xs text-[#86868B] font-medium">날짜를 눌러 과거의 나를 만나보세요.</p>
+                <p className="text-xs text-[#86868B] font-medium">날짜를 눌러 기록을 확인하세요.</p>
               </div>
               <div className="flex bg-[#F5F5F7] border border-[#D2D2D7]/30 rounded-xl p-1 items-center gap-1">
                 <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition-all active:scale-90"><ChevronLeft className="h-4 w-4" /></button>
@@ -205,27 +262,10 @@ export default function UnifiedPage() {
 
               <div className="grid grid-cols-7 gap-px bg-[#D2D2D7]/20 border border-[#D2D2D7]/20 rounded-2xl overflow-hidden shadow-inner bg-[#F5F5F7]">
                 {calendarDays.map((day) => {
-                  const isRecordDay = isTargetDay(day);
-                  const isCompleted = isPeriodCompleted(day);
+                  const isCompleted = isDateInCompletedPeriod(day);
                   const isCurrentToday = isToday(day);
                   const isCurrentMonth = isSameMonth(day, monthStart);
-                  const isPast = isBefore(day, startOfToday());
                   
-                  // Missed logic for weekly/monthly:
-                  // For weekly: if the week is past and not completed
-                  // For monthly: if the month is past and not completed
-                  // For daily: if the day is past and not completed
-                  let isMissed = false;
-                  if (frequency === "daily") {
-                    isMissed = isPast && !isCompleted && isCurrentMonth;
-                  } else if (frequency === "weekly") {
-                    const isWeekPast = isBefore(endOfWeek(day), startOfToday());
-                    isMissed = isWeekPast && !isCompleted && isCurrentMonth;
-                  } else if (frequency === "monthly") {
-                    const isMonthPast = isBefore(endOfMonth(day), startOfToday());
-                    isMissed = isMonthPast && !isCompleted && isCurrentMonth;
-                  }
-
                   return (
                     <div
                       key={day.toString()}
@@ -233,11 +273,9 @@ export default function UnifiedPage() {
                       className={cn(
                         "relative aspect-square bg-white flex flex-col items-start p-2.5 transition-all duration-200 cursor-pointer group",
                         !isCurrentMonth && "bg-[#F5F5F7] opacity-20 pointer-events-none",
-                        isCurrentMonth && "hover:bg-[#F5F5F7]/80",
-                        !isRecordDay && "bg-[#FAFAFA]/50"
+                        isCurrentMonth && "hover:bg-[#F5F5F7]/80"
                       )}
                     >
-                      {/* 날짜 숫자 - 왼쪽 상단 */}
                       <span className={cn(
                         "text-[12px] font-bold leading-none",
                         isCurrentToday ? "text-[#007AFF]" : "text-[#1D1D1F]/40"
@@ -245,28 +283,18 @@ export default function UnifiedPage() {
                         {format(day, "d")}
                       </span>
 
-                      {/* 상태 표시 - 중앙 배치 */}
                       <div className="flex-1 flex items-center justify-center w-full">
-                        {!isRecordDay ? (
-                          <div className="text-[9px] text-slate-300 font-medium uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">
-                            Rest
-                          </div>
-                        ) : isCompleted ? (
+                        {isCompleted ? (
                           <div className="h-10 w-10 rounded-2xl bg-[#007AFF]/10 flex items-center justify-center text-[#007AFF] animate-in zoom-in duration-300">
                             <Check className="h-6 w-6 stroke-[3px]" />
                           </div>
-                        ) : isCurrentToday ? (
+                        ) : isCurrentToday && !periodCompleted ? (
                           <div className="h-10 w-10 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-500 animate-pulse border border-amber-200">
                             <Sparkles className="h-6 w-6" />
-                          </div>
-                        ) : isMissed ? (
-                          <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-300">
-                            <X className="h-4 w-4" />
                           </div>
                         ) : null}
                       </div>
 
-                      {/* 오늘 하단 강조 */}
                       {isCurrentToday && (
                         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 h-0.5 w-4 bg-[#007AFF] rounded-full" />
                       )}
@@ -309,14 +337,14 @@ export default function UnifiedPage() {
                   <Textarea 
                     placeholder="당신의 마음을 남겨주세요..."
                     className="w-full border-none focus-visible:ring-0 text-base md:text-lg min-h-[300px] p-4 bg-transparent placeholder:text-[#D2D2D7] placeholder:text-base leading-relaxed resize-none scrollbar-hide"
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
+                    value={newAnswer}
+                    onChange={(e) => setNewAnswer(e.target.value)}
                     autoFocus
                   />
                 </div>
                 <footer className="p-8 pt-0 flex items-center justify-between mt-auto">
-                  <p className="text-[11px] font-bold text-[#86868B] uppercase tracking-widest">글자수: {answer.length}</p>
-                  <Button className="mac-button-primary h-12 rounded-full px-10 gap-2 shadow-xl shadow-[#007AFF]/20" disabled={!answer.trim()}>
+                  <p className="text-[11px] font-bold text-[#86868B] uppercase tracking-widest">글자수: {newAnswer.length}</p>
+                  <Button className="mac-button-primary h-12 rounded-full px-10 gap-2 shadow-xl shadow-[#007AFF]/20" disabled={!newAnswer.trim()}>
                     저장하기 <Check className="h-4 w-4" />
                   </Button>
                 </footer>
@@ -332,7 +360,7 @@ export default function UnifiedPage() {
               <header className="p-8 border-b border-[#D2D2D7]/30 flex items-center justify-between bg-white sticky top-0 z-10">
                 <div>
                   <h3 className="text-2xl font-black text-[#1D1D1F] tracking-tight">{format(selectedDate, "M월 d일", { locale: ko })}</h3>
-                  <p className="text-xs text-[#86868B] font-medium mt-1">과거의 당신이 남긴 답변들입니다.</p>
+                  <p className="text-xs text-[#86868B] font-medium mt-1">이 날의 기록들입니다.</p>
                 </div>
                 <button 
                   onClick={() => setSelectedDate(null)} 
@@ -343,25 +371,43 @@ export default function UnifiedPage() {
               </header>
 
               <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide bg-[#F5F5F7]/30">
-                {[2026, 2025, 2024].map((year) => {
-                  const key = `${year}-05-08`; // 더미용 고정 키
-                  const entries = dummyArchiveData[key as keyof typeof dummyArchiveData] || [];
-                  const entry = entries.find(e => e.year === year);
+                {/* 
+                  MVP에서는 '같은 날짜'에 대한 과거 연도 답변을 보여줍니다. 
+                  예: 오늘이 5월 11일이면, 과거 모든 해의 5월 11일 답변을 필터링.
+                  단, 주간/월간의 경우 해당 기간 내의 답변을 보여주도록 확장 가능.
+                */}
+                {(() => {
+                  const targetMonth = format(selectedDate, "MM");
+                  const targetDay = format(selectedDate, "dd");
                   
-                  return (
-                    <div key={year} className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-black text-[#1D1D1F]">{year}년</span>
+                  // 전체 답변 중 월/일이 같은 기록들 필터링
+                  const yearlyAnswers = answers.filter(a => {
+                    const d = parseISO(a.answer_date);
+                    return format(d, "MM") === targetMonth && format(d, "dd") === targetDay;
+                  });
+
+                  if (yearlyAnswers.length === 0) {
+                    return (
+                      <div className="py-20 text-center space-y-4">
+                        <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-300">
+                          <Lock className="h-5 w-5" />
+                        </div>
+                        <p className="text-sm text-slate-400 italic font-medium">이 날의 기록이 존재하지 않습니다.</p>
                       </div>
-                      <div className={cn(
-                        "p-6 rounded-[2rem] border transition-all leading-relaxed",
-                        entry ? "bg-white border-[#D2D2D7]/30 shadow-sm text-[#1D1D1F] font-medium" : "bg-slate-100/50 border-transparent italic text-slate-400 text-sm text-center py-10"
-                      )}>
-                        {entry ? entry.answer : "이 날의 기록이 존재하지 않습니다."}
+                    );
+                  }
+
+                  return yearlyAnswers.map((item) => (
+                    <div key={item.id} className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-black text-[#1D1D1F]">{format(parseISO(item.answer_date), "yyyy년")}</span>
+                      </div>
+                      <div className="p-6 rounded-[2rem] border bg-white border-[#D2D2D7]/30 shadow-sm text-[#1D1D1F] font-medium transition-all leading-relaxed">
+                        {item.content}
                       </div>
                     </div>
-                  );
-                })}
+                  ));
+                })()}
               </div>
             </div>
           </div>
@@ -369,5 +415,25 @@ export default function UnifiedPage() {
 
       </div>
     </div>
+  );
+}
+
+// 간단한 Lock 아이콘 컴포넌트 추가 (lucide-react에 없을 경우 대비)
+function Lock({ className }: { className?: string }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      className={className}
+    >
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
   );
 }

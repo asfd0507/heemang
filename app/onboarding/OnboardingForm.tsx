@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { addYears } from "date-fns";
 
 const onboardingSchema = z.object({
   period: z.number().min(2).max(5),
@@ -18,8 +20,11 @@ type OnboardingValues = z.infer<typeof onboardingSchema>;
 
 export function OnboardingForm() {
   const router = useRouter();
+  const supabase = createClient();
   const [step, setStep] = useState(1);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const form = useForm<OnboardingValues>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
@@ -34,13 +39,39 @@ export function OnboardingForm() {
   const nextStep = () => setStep((s) => s + 1);
   const prevStep = () => setStep((s) => s - 1);
 
-  const onSubmit = (data: OnboardingValues) => {
-    console.log("Onboarding Data:", data);
-    // 선택한 설정을 로컬 스토리지에 임시 저장 (DB 연동 전까지 UI 테스트용)
-    if (typeof window !== "undefined") {
-      localStorage.setItem("diary_settings", JSON.stringify(data));
+  const onSubmit = async (data: OnboardingValues) => {
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      const startDate = new Date();
+      const endDate = addYears(startDate, data.period);
+
+      const { error } = await supabase
+        .from("diary_plans")
+        .insert({
+          user_id: user.id,
+          duration_years: data.period,
+          frequency: data.frequency,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+        });
+
+      if (error) throw error;
+
+      router.push("/dashboard");
+      router.refresh(); // 미들웨어 체크를 위해 새로고침 유도
+    } catch (error) {
+      console.error("Error saving onboarding data:", error);
+      alert("설정을 저장하는 중 오류가 발생했습니다.");
+    } finally {
+      setIsSubmitting(false);
     }
-    router.push("/dashboard");
   };
 
   return (
@@ -171,11 +202,11 @@ export function OnboardingForm() {
           <Button
             type={step === 3 ? "submit" : "button"}
             onClick={step === 3 ? undefined : nextStep}
-            disabled={step === 3 && !isConfirmed}
+            disabled={(step === 3 && !isConfirmed) || isSubmitting}
             className="flex-[2] h-12 rounded-full bg-[#007AFF] text-white hover:bg-[#0071E3] font-semibold transition-all shadow-md shadow-[#007AFF]/20 gap-2 disabled:opacity-50 disabled:shadow-none"
           >
-            {step === 1 ? "다음 단계" : step === 2 ? "선택 완료" : "타임캡슐 시작하기"}
-            {step !== 3 && <ChevronRight className="h-4 w-4" />}
+            {isSubmitting ? "저장 중..." : step === 1 ? "다음 단계" : step === 2 ? "선택 완료" : "타임캡슐 시작하기"}
+            {step !== 3 && !isSubmitting && <ChevronRight className="h-4 w-4" />}
           </Button>
         </div>
       </div>
