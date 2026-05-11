@@ -21,12 +21,12 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#FFFDF8] flex items-center justify-center p-4">
       <Card className="w-full max-w-md border-none shadow-2xl bg-white rounded-[2.5rem] overflow-hidden">
         <CardHeader className="pt-12 pb-8 text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-[#4A90E2]/10 rounded-2xl flex items-center justify-center text-[#4A90E2] animate-bounce">
-            <Sparkles className="h-8 w-8" />
+          <div className="mx-auto w-16 h-16 bg-[#3A7BD5]/10 rounded-2xl flex items-center justify-center text-[#FFD54F] animate-bounce shadow-inner">
+            <Sparkles className="h-8 w-8 fill-current" />
           </div>
           <div className="space-y-2">
             <CardTitle className="text-3xl font-black text-[#1D1D1F] tracking-tight">
-              5년 후 나에게
+              미래의 조각
             </CardTitle>
             <CardDescription className="text-base font-medium text-[#86868B]">
               오늘의 기록이 미래의 선물이 됩니다.
