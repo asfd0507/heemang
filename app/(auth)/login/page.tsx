@@ -18,7 +18,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFFDF8] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md border-none shadow-2xl bg-white rounded-[2.5rem] overflow-hidden">
         <CardHeader className="pt-12 pb-8 text-center space-y-4">
           <div className="mx-auto w-16 h-16 bg-[#3A7BD5]/10 rounded-2xl flex items-center justify-center text-[#FFD54F] animate-bounce shadow-inner">

@@ -206,21 +206,21 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FFFDF8]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-[#86868B] font-bold">로딩 중...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FFFDF8] pb-20 pt-10 px-4 md:px-6">
+    <div className="min-h-screen bg-background pb-20 pt-10 px-4 md:px-6">
       <div className="container mx-auto max-w-4xl space-y-6 animate-in fade-in duration-700">
         
         {/* 0. Top User Header */}
         <section className="mac-card p-4 md:p-6 bg-white flex items-center justify-between shadow-sm border border-[#D2D2D7]/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#3A7BD5] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#3A7BD5]/20">
-              <Sparkles className="h-5 w-5 text-[#FFD54F] fill-[#FFD54F]" />
+            <div className="w-10 h-10 bg-gradient-to-br from-[#3A7BD5] to-[#00D2FF] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#3A7BD5]/20 ring-1 ring-white/20">
+              <Sparkles className="h-5 w-5 text-white fill-white/20" />
             </div>
             <div>
               <h2 className="text-sm font-black text-[#1D1D1F]">미래의 조각</h2>
@@ -373,7 +373,7 @@ export default function DashboardPage() {
                         onClick={() => handleDayClick(day)}
                         className={cn(
                           "relative aspect-square flex flex-col items-start p-3 transition-all duration-300 cursor-pointer group",
-                          isCurrentMonth ? "bg-white" : "bg-[#FFFDF8] pointer-events-none",
+                          isCurrentMonth ? "bg-white" : "bg-background pointer-events-none",
                           isCurrentMonth && "hover:bg-[#F5F5F7]/30"
                         )}
                       >
@@ -486,15 +486,20 @@ export default function DashboardPage() {
 
               <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide bg-[#F5F5F7]/30">
                 {(() => {
-                  const targetYear = format(selectedDate, "yyyy");
-                  const targetMonth = format(selectedDate, "MM");
+                  const targetMonthIdx = selectedDate.getMonth();
                   const targetDay = format(selectedDate, "dd");
+                  const targetWeekNum = getISOWeek(selectedDate);
                   
                   const yearlyAnswers = answers.filter(a => {
+                    const answerDate = parseISO(a.answer_date);
                     if (isMonthly) {
-                      return a.answer_date.startsWith(`${targetYear}-${targetMonth}`);
+                      return answerDate.getMonth() === targetMonthIdx;
                     }
-                    return a.answer_date.endsWith(`${targetMonth}-${targetDay}`);
+                    if (isWeekly) {
+                      return getISOWeek(answerDate) === targetWeekNum;
+                    }
+                    // Daily: match month and day
+                    return format(answerDate, "MM-dd") === format(selectedDate, "MM-dd");
                   });
 
                   if (yearlyAnswers.length === 0) {

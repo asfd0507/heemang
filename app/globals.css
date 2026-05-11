@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #F5F5F7;
+  --color-background: #F8FAFC;
   --color-foreground: #1D1D1F;
   --color-primary: #007AFF;
   --color-secondary: #E8E8ED;
@@ -12,7 +12,7 @@
 
 @layer base {
   body {
-    @apply bg-[#F5F5F7] text-[#1D1D1F] antialiased;
+    @apply bg-background text-[#1D1D1F] antialiased;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
   }
 }
