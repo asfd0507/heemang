@@ -18,11 +18,12 @@ import {
   parseISO
 } from "date-fns";
 import { ko } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Sparkles, X, Check, PenLine } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, X, Check, PenLine, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 interface Answer {
   id: string;
@@ -40,6 +41,7 @@ interface DiaryPlan {
 
 export default function DashboardPage() {
   const supabase = createClient();
+  const router = useRouter();
   
   // State
   const [user, setUser] = useState<any>(null);
@@ -86,6 +88,12 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   const frequency = plan?.frequency || "daily";
   const questionsByFrequency = {
@@ -188,8 +196,32 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#F5F5F7] pb-20 pt-10 px-4 md:px-6">
       <div className="container mx-auto max-w-4xl space-y-10 animate-in fade-in duration-700">
         
+        {/* 0. Top User Header */}
+        <section className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#4A90E2] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#4A90E2]/20">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-[#1D1D1F]">희망 다이어리</h2>
+              <p className="text-[11px] text-[#86868B] font-medium">
+                <span className="text-[#4A90E2]">{user?.user_metadata?.full_name || user?.email?.split('@')[0]}</span>님, 안녕하세요!
+              </p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleLogout}
+            className="text-[#86868B] hover:text-[#E03E3E] hover:bg-red-50 rounded-xl gap-2 transition-colors h-10"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="text-xs font-bold">로그아웃</span>
+          </Button>
+        </section>
+
         {/* 1. Header / Question Summary Area */}
-        <section className="animate-in slide-in-from-top-4 duration-700">
+        <section className="animate-in slide-in-from-top-4 duration-700 mt-4">
           <div className="mac-card p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 border-l-4 border-l-[#007AFF]">
             <div className="space-y-3 flex-1">
               <div className="flex items-center gap-2">
