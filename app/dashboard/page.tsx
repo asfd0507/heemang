@@ -213,33 +213,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 pt-10 px-4 md:px-6">
+    <div className="min-h-screen bg-transparent pb-20 pt-28 px-4 md:px-6">
       <div className="container mx-auto max-w-4xl space-y-6 animate-in fade-in duration-700">
         
-        {/* 0. Top User Header */}
-        <section className="mac-card p-4 md:p-6 bg-white flex items-center justify-between shadow-sm border border-[#D2D2D7]/20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#3A7BD5] to-[#00D2FF] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#3A7BD5]/20 ring-1 ring-white/20">
-              <Sparkles className="h-5 w-5 text-white fill-white/20" />
-            </div>
-            <div>
-              <h2 className="text-sm font-black text-[#1D1D1F]">미래의 조각</h2>
-              <p className="text-[11px] text-[#86868B] font-medium">
-                <span className="text-[#3A7BD5] font-bold">{user?.user_metadata?.full_name || user?.email?.split('@')[0]}</span>님, 안녕하세요!
-              </p>
-            </div>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleLogout}
-            className="text-[#86868B] hover:text-[#E03E3E] hover:bg-red-50 rounded-xl gap-2 transition-colors h-10 px-4"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="text-xs font-bold">로그아웃</span>
-          </Button>
-        </section>
-
         {/* 1. Header / Question Summary Area */}
         <section className="animate-in slide-in-from-top-4 duration-700">
           <div className="mac-card p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4 border-l-4 border-l-[#3A7BD5] bg-white">
