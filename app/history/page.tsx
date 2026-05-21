@@ -35,66 +35,66 @@ const historyData = [
 
 export default function HistoryPage() {
   return (
-    <div className="min-h-screen bg-[#F5F5F7] pb-32">
-      <nav className="fixed top-0 left-0 right-0 h-12 bg-white/70 backdrop-blur-md border-b border-[#D2D2D7]/30 z-50">
-        <div className="container mx-auto max-w-screen-md h-full px-4 flex items-center justify-between">
-          <Link href="/dashboard" className="text-sm font-bold tracking-tight text-[#1D1D1F]">5년 후 나에게</Link>
-          <div className="flex gap-4">
-            <Link href="/dashboard" className="text-xs font-medium text-[#86868B] hover:text-[#007AFF] transition-colors flex items-center gap-1">
-              <LayoutDashboard className="h-3.5 w-3.5" />
-              대시보드
-            </Link>
-            <Link href="/calendar" className="text-xs font-medium text-[#86868B] hover:text-[#007AFF] transition-colors flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
-              달력
-            </Link>
+    <div className="min-h-screen bg-white pb-32 pt-28">
+      <main className="container mx-auto max-w-screen-md px-4 space-y-16 animate-in fade-in duration-1000">
+        <header className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full bg-[#F5F5F7] text-[#3A7BD5] text-[10px] font-black uppercase tracking-widest border border-[#3A7BD5]/10">Archive</span>
           </div>
-        </div>
-      </nav>
-
-      <main className="container mx-auto max-w-screen-md px-4 pt-24 space-y-12 animate-in fade-in duration-700">
-        <header className="space-y-2">
-          <p className="text-[10px] font-bold tracking-widest text-[#007AFF] uppercase">Archive</p>
-          <h1 className="text-2xl font-bold tracking-tight text-[#1D1D1F]">당신이 가장 행복했던 순간은?</h1>
-          <p className="text-sm text-[#86868B]">매년 같은 날 당신이 남긴 기록들입니다.</p>
+          <h1 className="text-3xl font-black tracking-tighter text-[#2C2C2E]">당신이 가장 행복했던 순간은?</h1>
+          <p className="text-base text-[#8E8E93] font-bold tracking-tight">매년 같은 날 당신이 남긴 소중한 조각들입니다.</p>
         </header>
 
-        <div className="space-y-6 relative">
-          {/* Vertical line decoration */}
-          <div className="absolute left-[1.35rem] top-0 bottom-0 w-px bg-[#D2D2D7]/50" />
+        <div className="space-y-12 relative">
+          {/* Timeline - Simple Binding Line Style */}
+          <div className="absolute left-[1.35rem] top-2 bottom-0 w-[2px] bg-[#E5E5E1]" />
 
           {historyData.map((item) => (
-            <div key={item.year} className="relative pl-10 group">
-              {/* Node dot */}
+            <div key={item.year} className="relative pl-12 group">
+              {/* Timeline Node - Simple Ink Dot Style */}
               <div className={cn(
-                "absolute left-5 top-1.5 h-1.5 w-1.5 rounded-full ring-4 ring-[#F5F5F7] z-10",
-                item.status === "completed" ? "bg-[#007AFF]" : "bg-[#D2D2D7]"
-              )} />
+                "absolute left-[1.05rem] top-2 h-3 w-3 rounded-full ring-[6px] ring-white z-20 transition-all duration-500 flex items-center justify-center",
+                item.status === "completed" 
+                  ? "bg-[#3A7BD5]" 
+                  : "bg-white border-2 border-[#E5E5E1]"
+              )}>
+                {item.status === "completed" && <div className="w-1 h-1 bg-white rounded-full" />}
+              </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-lg font-bold text-[#1D1D1F] tracking-tight">{item.year}년</span>
-                  <span className="text-[11px] font-medium text-[#86868B]">{item.date}</span>
-                  {item.status === "locked" && <Lock className="h-3 w-3 text-[#D2D2D7]" />}
+                  <span className={cn(
+                    "text-xl font-black tracking-tighter transition-colors",
+                    item.status === "completed" ? "text-[#2C2C2E]" : "text-[#8E8E93]"
+                  )}>{item.year}년</span>
+                  <div className="h-px w-8 bg-[#E5E5E1]" />
+                  <span className="text-[12px] font-bold text-[#8E8E93] uppercase tracking-widest">{item.date}</span>
                 </div>
 
                 <div className={cn(
-                  "mac-card overflow-hidden transition-all duration-300",
-                  item.status === "completed" ? "p-8" : "p-1 bg-[#F5F5F7]/30"
+                  "transition-all duration-700 rounded-[2.5rem] overflow-hidden",
+                  item.status === "completed" 
+                    ? "bg-white p-10 shadow-sm border border-[#E5E5E1] group-hover:shadow-md group-hover:border-[#3A7BD5]/20" 
+                    : "bg-[#FAFAF9] p-1 border-none"
                 )}>
                   {item.status === "completed" ? (
-                    <p className="text-base leading-relaxed text-[#1D1D1F]">
+                    <p className="text-lg leading-[2] text-[#2C2C2E] font-medium tracking-tight">
                       {item.answer}
                     </p>
                   ) : (
-                    <div className="p-8 flex flex-col items-center justify-center text-center space-y-4">
-                      <p className="text-sm text-[#86868B] max-w-[200px]">
-                        올해의 답변을 완료해야 작년의 기록을 볼 수 있습니다.
-                      </p>
+                    <div className="p-12 rounded-[2.5rem] border-2 border-dashed border-[#E5E5E1] flex flex-col items-center justify-center text-center space-y-6 bg-white/40">
+                      <div className="w-12 h-12 rounded-2xl bg-white border border-[#E5E5E1] flex items-center justify-center text-[#8E8E93]/40">
+                        <Lock className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm text-[#8E8E93] font-bold tracking-tight">
+                          올해의 답변을 완료해야<br />지난 조각들을 마주할 수 있습니다.
+                        </p>
+                      </div>
                       <Link href="/dashboard">
-                        <Button className="mac-button-primary h-10 px-6 text-xs gap-2">
-                          답변 남기기
-                          <ArrowUpRight className="h-3 w-3" />
+                        <Button className="bg-[#3A7BD5] hover:bg-[#2C5EAB] text-white h-11 px-8 rounded-xl text-xs font-black gap-2 shadow-lg shadow-[#3A7BD5]/10 transition-all border-none">
+                          기록하러 가기
+                          <ArrowUpRight className="h-3.5 w-3.5" />
                         </Button>
                       </Link>
                     </div>

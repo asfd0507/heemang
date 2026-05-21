@@ -42,3 +42,22 @@ create policy "deletion_insert"
 on deletion_requests
 for insert
 with check (auth.uid() = user_id);
+
+-- future_letters 정책 추가
+alter table future_letters enable row level security;
+
+create policy "future_letters_select"
+on future_letters
+for select
+using (auth.uid() = user_id);
+
+create policy "future_letters_insert"
+on future_letters
+for insert
+with check (auth.uid() = user_id);
+
+create policy "future_letters_update"
+on future_letters
+for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);

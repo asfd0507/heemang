@@ -1,32 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #F8FAFC;
-  --color-foreground: #1D1D1F;
-  --color-primary: #007AFF;
-  --color-secondary: #E8E8ED;
-  --color-muted: #86868B;
+  --color-background: #F5F5F7;
+  --color-foreground: #2C2C2E;
+  --color-primary: #3A7BD5;
+  --color-secondary: #F2F2F7;
+  --color-muted: #8E8E93;
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
 }
 
 @layer base {
   body {
-    @apply bg-background text-[#1D1D1F] antialiased;
+    @apply bg-[#F5F5F7] text-[#2C2C2E] antialiased;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
   }
 }
 
 @layer components {
   .mac-card {
-    @apply bg-white rounded-2xl border border-[#D2D2D7]/30 shadow-[0_4px_12px_rgba(0,0,0,0.05)];
+    @apply bg-white rounded-[2rem] border border-[#E5E5E1] shadow-sm;
   }
 
   .mac-button-primary {
-    @apply bg-[#007AFF] text-white rounded-xl px-6 py-3 font-medium transition-all duration-200 shadow-[0_2px_4px_rgba(0,122,255,0.2)] hover:bg-[#0071E3] active:scale-[0.98];
+    @apply bg-[#3A7BD5] text-white rounded-2xl px-6 py-3 font-bold transition-all duration-300 shadow-lg shadow-[#3A7BD5]/20 hover:bg-[#2C5EAB] hover:scale-105 active:scale-[0.98] border-none;
   }
 
   .mac-button-secondary {
-    @apply bg-[#E8E8ED] text-[#1D1D1F] rounded-xl px-6 py-3 font-medium transition-all duration-200 hover:bg-[#D2D2D7] active:scale-[0.98];
+    @apply bg-[#F2F2F7] text-[#8E8E93] rounded-2xl px-6 py-3 font-bold transition-all duration-300 hover:bg-[#E5E5E1] hover:text-[#2C2C2E] active:scale-[0.98];
   }
 }
